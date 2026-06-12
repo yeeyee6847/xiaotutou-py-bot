@@ -6,7 +6,6 @@ import os
 from dotenv import load_dotenv
 
 load_dotenv()
-token = os.getenv("DISCORD_TOKEN")
 
 class MyClient(discord.Client):
     def __init__(self):
@@ -16,11 +15,11 @@ class MyClient(discord.Client):
 
     async def setup_hook(self):
         self.pool = await asyncpg.create_pool(
-            user="postgres",
-            password="yeeyee6847",
-            database="postgres",
-            host="localhost"
-        )
+            user=os.getenv("DB_USER"),
+            password=os.getenv("DB_PASSWORD"),
+            database=os.getenv("DB_NAME"),
+            host=os.getenv("DB_HOST")
+)
 
         guild = discord.Object(id=771003598981038081)
         self.tree.copy_global_to(guild=guild)
@@ -340,4 +339,5 @@ async def want_check(
 # IMPORTANT: register group
 client.tree.add_command(fragments_group)
 
+token = os.getenv("DISCORD_TOKEN")
 client.run(token)

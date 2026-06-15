@@ -1,11 +1,16 @@
+import os
 import json
 import discord
 import asyncpg
 from discord import app_commands
-import os
 from dotenv import load_dotenv
 
+import keep_alive
+
 load_dotenv()
+token = os.getenv("DISCORD_TOKEN")
+
+keep_alive()
 
 class MyClient(discord.Client):
     def __init__(self):
@@ -31,10 +36,20 @@ client = MyClient()
 @client.event
 async def on_ready():
     print(f"Logged in as {client.user} (ID: {client.user.id})")
+    
+    activity = discord.Game(name="愤怒佬成仙中...")
 
+    await client.change_presence(
+        status=discord.Status.online,
+        activity=activity
+    )
+    
 # ----------------------------------- LOAD SHIKIGAMI JSON START -----------------------------------
 with open("data/shikigami.json", "r", encoding="utf-8") as f:
     SHIKIGAMI = json.load(f)
+    
+with open("data/shikigami_traditional.json", "r", encoding="utf-8") as f:
+    SHIKIGAMI_TRADITIONAL = json.load(f)    
 
 RARITY_CHOICES = [
     app_commands.Choice(name=rarity, value=rarity)
@@ -334,10 +349,176 @@ async def want_check(
 
     await interaction.response.send_message(embed=embed)
 # ----------------------------------- WANT-CHECK END -----------------------------------
+# ----------------------------------- WANT-REMOVE START -----------------------------------
+@fragments_group.command(
+    name="want-remove",
+    description="减少想要的式神碎片数量"
+)
+@app_commands.describe(
+    rarity="稀有度",
+    name="式神名称",
+    quantity="减少数量"
+)
+@app_commands.choices(
+    rarity=RARITY_CHOICES
+)
+@app_commands.autocomplete(
+    name=shikigami_autocomplete
+)
+async def want_remove(
+    interaction: discord.Interaction,
+    rarity: app_commands.Choice[str],
+    name: str,
+    quantity: int
+):
+    async with client.pool.acquire() as conn:
+
+        row = await conn.fetchrow("""
+            SELECT quantity
+            FROM fragment_wants
+            WHERE user_id = $1
+              AND rarity = $2
+              AND shikigami = $3
+        """,
+        interaction.user.id,
+        rarity.value,
+        name)
+
+        if not row:
+            await interaction.response.send_message(
+                f"❌ 你没有登记想要【{rarity.value}】{name}"
+            )
+            return
+
+        current_qty = row["quantity"]
+
+        if quantity > current_qty:
+            await interaction.response.send_message(
+                f"❌ 你只登记了 {current_qty} 片需求"
+            )
+            return
+
+        new_qty = current_qty - quantity
+
+        if new_qty == 0:
+
+            await conn.execute("""
+                DELETE FROM fragment_wants
+                WHERE user_id = $1
+                  AND rarity = $2
+                  AND shikigami = $3
+            """,
+            interaction.user.id,
+            rarity.value,
+            name)
+
+            await interaction.response.send_message(
+                f"✅ 已从需求清单移除【{rarity.value}】{name}"
+            )
+
+        else:
+
+            await conn.execute("""
+                UPDATE fragment_wants
+                SET quantity = $1
+                WHERE user_id = $2
+                  AND rarity = $3
+                  AND shikigami = $4
+            """,
+            new_qty,
+            interaction.user.id,
+            rarity.value,
+            name)
+
+            await interaction.response.send_message(
+                f"✅ 已减少需求\n"
+                f"【{rarity.value}】{name}\n"
+                f"{current_qty} ➜ {new_qty}"
+            )
+# ----------------------------------- WANT-REMOVE END -----------------------------------
+# ----------------------------------- MATCH START -----------------------------------
+@fragments_group.command(
+    name="match",
+    description="寻找拥有你想要碎片的玩家"
+)
+async def match(interaction: discord.Interaction):
+
+    async with client.pool.acquire() as conn:
+
+        # 取得自己的需求
+        wants = await conn.fetch("""
+            SELECT rarity, shikigami, quantity
+            FROM fragment_wants
+            WHERE user_id = $1
+            ORDER BY rarity, shikigami
+        """, interaction.user.id)
+
+        if not wants:
+            await interaction.response.send_message(
+                "📭 你还没有登记任何想要的碎片"
+            )
+            return
+
+        embed = discord.Embed(
+            title="🎯 碎片配对结果",
+            description=f"{interaction.user.mention} 想要的碎片",
+            color=0x2ecc71
+        )
+
+        found_any = False
+
+        for want in wants:
+
+            rarity = want["rarity"]
+            shikigami = want["shikigami"]
+            quantity = want["quantity"]
+
+            owners = await conn.fetch("""
+                SELECT user_id, quantity
+                FROM fragments
+                WHERE rarity = $1
+                  AND shikigami = $2
+                  AND quantity > 0
+                  AND user_id != $3
+                ORDER BY quantity DESC
+            """,
+            rarity,
+            shikigami,
+            interaction.user.id)
+
+            if not owners:
+                continue
+
+            found_any = True
+
+            lines = []
+
+            for owner in owners[:10]:  # 最多显示10人
+
+                lines.append(
+                    f"<@{owner['user_id']}> - {owner['quantity']}片"
+                )
+
+            embed.add_field(
+                name=f"【{rarity}】{shikigami} (需求 {quantity}片)",
+                value="\n".join(lines),
+                inline=False
+            )
+
+        if not found_any:
+            await interaction.response.send_message(
+                "😢 没找到任何拥有你需求碎片的玩家"
+            )
+            return
+
+        await interaction.response.send_message(
+            embed=embed
+        )
+# ----------------------------------- MATCH END -----------------------------------        
 # ----------------------------------- FRAGMENTS GROUP END -----------------------------------
 
 # IMPORTANT: register group
 client.tree.add_command(fragments_group)
 
-token = os.getenv("DISCORD_TOKEN")
+
 client.run(token)

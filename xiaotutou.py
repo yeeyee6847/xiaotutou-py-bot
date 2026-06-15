@@ -48,9 +48,6 @@ async def on_ready():
 with open("data/shikigami.json", "r", encoding="utf-8") as f:
     SHIKIGAMI = json.load(f)
     
-with open("data/shikigami_traditional.json", "r", encoding="utf-8") as f:
-    SHIKIGAMI_TRADITIONAL = json.load(f)    
-
 RARITY_CHOICES = [
     app_commands.Choice(name=rarity, value=rarity)
     for rarity in SHIKIGAMI.keys()

@@ -5,7 +5,7 @@ import asyncpg
 from discord import app_commands
 from dotenv import load_dotenv
 
-import keep_alive
+from keep_alive import keep_alive
 
 load_dotenv()
 token = os.getenv("DISCORD_TOKEN")

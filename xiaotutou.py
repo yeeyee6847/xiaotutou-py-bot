@@ -52,7 +52,9 @@ async def on_ready():
 
 # ----------------------------------- SEND_LOG START -----------------------------------
 async def send_log(client, message: str):
+    print(f"send_log: {message}")
     channel = client.get_channel(LOG_CHANNEL_ID)
+    print(f"send_log: {channel}")
     if channel:
         await channel.send(message)
 # ----------------------------------- SEND_LOG END -----------------------------------

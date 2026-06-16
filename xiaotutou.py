@@ -26,7 +26,9 @@ class MyClient(discord.Client):
 
     async def setup_hook(self):
         self.pool = await asyncpg.create_pool(
-            DATABASE_URL,
+            DATABASE_URL,           
+            min_size=1,
+            max_size=5,
             timeout=10
         )
 

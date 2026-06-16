@@ -138,15 +138,15 @@ async def add(
         name,
         quantity
         )
-
-    await interaction.followup.send(
-        f"✅ {interaction.user.mention} 已更新 {quantity} 个【{rarity.value}】{name} 碎片"
-    )
-    
+        
     await send_log(
         client,
         f"📦 ADD | user={interaction.user} ({interaction.user.id}) "
         f"| {rarity.value} {name} x{quantity}"
+    )
+
+    await interaction.followup.send(
+        f"✅ {interaction.user.mention} 已更新 {quantity} 个【{rarity.value}】{name} 碎片"
     )
 # ----------------------------------- ADD END -----------------------------------
 

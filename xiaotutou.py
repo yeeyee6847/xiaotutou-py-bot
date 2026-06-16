@@ -8,7 +8,10 @@ from dotenv import load_dotenv
 from keep_alive import keep_alive
 
 load_dotenv()
-token = os.getenv("DISCORD_TOKEN")
+
+# Fetch variables
+DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 keep_alive()
 
@@ -20,11 +23,9 @@ class MyClient(discord.Client):
 
     async def setup_hook(self):
         self.pool = await asyncpg.create_pool(
-            user=os.getenv("DB_USER"),
-            password=os.getenv("DB_PASSWORD"),
-            database=os.getenv("DB_NAME"),
-            host=os.getenv("DB_HOST")
-)
+            DATABASE_URL,
+            timeout=10
+        )
 
         guild = discord.Object(id=771003598981038081)
         self.tree.copy_global_to(guild=guild)
@@ -517,5 +518,4 @@ async def match(interaction: discord.Interaction):
 # IMPORTANT: register group
 client.tree.add_command(fragments_group)
 
-
-client.run(token)
+client.run(DISCORD_TOKEN)

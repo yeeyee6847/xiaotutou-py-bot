@@ -12,6 +12,7 @@ load_dotenv()
 # Fetch variables
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 DATABASE_URL = os.getenv("DATABASE_URL")
+BOT_STATUS = os.getenv("BOT_STATUS")
 
 # Discord Log channel ID
 LOG_CHANNEL_ID = os.getenv("LOG_CHANNEL_ID")
@@ -42,7 +43,7 @@ client = MyClient()
 async def on_ready():
     print(f"Logged in as {client.user} (ID: {client.user.id})")
     
-    activity = discord.Game(name="愤怒佬成仙中...")
+    activity = discord.Game(name=BOT_STATUS)
 
     await client.change_presence(
         status=discord.Status.online,

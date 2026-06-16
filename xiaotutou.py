@@ -61,6 +61,61 @@ async def send_log(client, message: str):
     if channel:
         await channel.send(message)
 # ----------------------------------- SEND_LOG END -----------------------------------
+
+# ----------------------------------- HELP START -----------------------------------
+@client.tree.command(
+    name="help",
+    description="小禿頭碎片系统帮助"
+)
+async def help_command(interaction: discord.Interaction):
+
+    embed = discord.Embed(
+        title="🎴 《小禿頭轉職交換碎片資訊員》",
+        description=(
+            "還在煩惱碎片的資訊不夠清晰、要瘋狂刷交換區帖子嗎？\n\n"
+            "禿佬聽到各位的心聲了‼️\n"
+            "小禿頭全新升級‼️\n"
+            "介面簡單方便好上手‼️"
+        ),
+        color=0xf1c40f
+    )
+
+    embed.add_field(
+        name="⭐️ 使用方法 ⭐️",
+        value=(
+            "❶ 輸入指令 `/`\n"
+            "❷ 選擇「小禿頭 fragments」\n"
+            "❸ 使用以下功能"
+        ),
+        inline=False
+    )
+
+    embed.add_field(
+        name="📦 碎片功能",
+        value=(
+            "• `/fragments add` ➜ 添加碎片\n"
+            "• `/fragments remove` ➜ 刪除碎片\n"
+            "• `/fragments list` ➜ 查看自己的碎片\n"
+            "• `/fragments list @玩家` ➜ 查看他人碎片\n"
+            "• `/fragments swap` ➜ 與玩家交換碎片\n"
+        ),
+        inline=False
+    )
+
+    embed.add_field(
+        name="⚠️ 注意事項",
+        value=(
+            "＊添加、刪除碎片需逐項更新\n"
+            "＊一個指令只可編輯一種式神\n"
+            "＊交換前請確認數量是否足夠"
+        ),
+        inline=False
+    )
+
+    embed.set_footer(text="by 番茄佬 🍅")
+
+    await interaction.response.send_message(embed=embed)
+# ----------------------------------- HELP END ----------------------------------- 
     
 # ----------------------------------- LOAD SHIKIGAMI JSON START -----------------------------------
 with open("data/shikigami.json", "r", encoding="utf-8") as f:

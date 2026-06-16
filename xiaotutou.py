@@ -84,30 +84,61 @@ async def help_command(interaction: discord.Interaction):
         name="⭐️ 使用方法 ⭐️",
         value=(
             "❶ 輸入指令 `/`\n"
-            "❷ 選擇「小禿頭 fragments」\n"
+            "❷ 選擇「fragments」\n"
             "❸ 使用以下功能"
         ),
         inline=False
     )
 
+    # =========================
+    # FRAGMENTS
+    # =========================
     embed.add_field(
-        name="📦 碎片功能",
+        name="📦 碎片系统（Fragments）",
         value=(
             "• `/fragments add` ➜ 添加碎片\n"
-            "• `/fragments remove` ➜ 刪除碎片\n"
-            "• `/fragments list` ➜ 查看自己的碎片\n"
+            "• `/fragments remove` ➜ 删除碎片\n"
+            "• `/fragments list` ➜ 查看自己的碎片 + 想要\n"
             "• `/fragments list @玩家` ➜ 查看他人碎片\n"
-            "• `/fragments swap` ➜ 與玩家交換碎片\n"
+            "• `/fragments swap` ➜ 与玩家交换碎片（如果你有）\n"
         ),
         inline=False
     )
 
+    # =========================
+    # WANT SYSTEM
+    # =========================
     embed.add_field(
-        name="⚠️ 注意事項",
+        name="🙏 需求系统（Want System）",
         value=(
-            "＊添加、刪除碎片需逐項更新\n"
-            "＊一個指令只可編輯一種式神\n"
-            "＊交換前請確認數量是否足夠"
+            "• `/fragments want` ➜ 添加想要的碎片\n"
+            "• `/fragments want-remove` ➜ 删除想要的碎片\n"
+            "• `/fragments want-check` ➜ 查看谁拥有你想要的碎片\n"
+        ),
+        inline=False
+    )
+
+    # =========================
+    # MATCH SYSTEM
+    # =========================
+    embed.add_field(
+        name="🎯 配对系统（Match System）",
+        value=(
+            "• `/fragments match` ➜ 自动匹配拥有你需求碎片的玩家\n"
+        ),
+        inline=False
+    )
+
+    # =========================
+    # NOTE
+    # =========================
+    embed.add_field(
+        name="⚠️ 注意事项",
+        value=(
+            "＊添加、删除碎片需逐项更新\n"
+            "＊一条指令只可编辑一种式神\n"
+            "＊交换前请确认数量是否足够\n"
+            "＊数据以数据库为准"
         ),
         inline=False
     )

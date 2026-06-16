@@ -13,8 +13,10 @@ load_dotenv()
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-keep_alive()
+# Discord Log channel ID
+LOG_CHANNEL_ID = os.getenv("LOG_CHANNEL_ID")
 
+# ----------------------------------- MYCLIENT START -----------------------------------
 class MyClient(discord.Client):
     def __init__(self):
         intents = discord.Intents.default()
@@ -33,7 +35,9 @@ class MyClient(discord.Client):
         print("Guild slash commands synced!")
 
 client = MyClient()
+# ----------------------------------- MYCLIENT END -----------------------------------
 
+# ----------------------------------- ON_READY START -----------------------------------
 @client.event
 async def on_ready():
     print(f"Logged in as {client.user} (ID: {client.user.id})")
@@ -44,6 +48,14 @@ async def on_ready():
         status=discord.Status.online,
         activity=activity
     )
+# ----------------------------------- ON_READY END -----------------------------------
+
+# ----------------------------------- SEND_LOG START -----------------------------------
+async def send_log(client, message: str):
+    channel = client.get_channel(LOG_CHANNEL_ID)
+    if channel:
+        await channel.send(message)
+# ----------------------------------- SEND_LOG END -----------------------------------
     
 # ----------------------------------- LOAD SHIKIGAMI JSON START -----------------------------------
 with open("data/shikigami.json", "r", encoding="utf-8") as f:
@@ -129,6 +141,12 @@ async def add(
 
     await interaction.followup.send(
         f"✅ {interaction.user.mention} 已更新 {quantity} 个【{rarity.value}】{name} 碎片"
+    )
+    
+    await send_log(
+        client,
+        f"📦 ADD | user={interaction.user} ({interaction.user.id}) "
+        f"| {rarity.value} {name} x{quantity}"
     )
 # ----------------------------------- ADD END -----------------------------------
 
@@ -518,4 +536,6 @@ async def match(interaction: discord.Interaction):
 # IMPORTANT: register group
 client.tree.add_command(fragments_group)
 
+
+keep_alive()
 client.run(DISCORD_TOKEN)

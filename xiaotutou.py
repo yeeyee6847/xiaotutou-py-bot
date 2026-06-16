@@ -100,7 +100,6 @@ async def help_command(interaction: discord.Interaction):
             "• `/fragments remove` ➜ 删除碎片\n"
             "• `/fragments list` ➜ 查看自己的碎片 + 想要\n"
             "• `/fragments list @玩家` ➜ 查看他人碎片\n"
-            "• `/fragments swap` ➜ 与玩家交换碎片（如果你有）\n"
         ),
         inline=False
     )

@@ -614,11 +614,10 @@ class Fragment(commands.Cog):
             )
             return
 
-        # =========================
-        # Embed
-        # =========================
+        shiki_name = rows[0]["name_tra"]
+
         embed = discord.Embed(
-            title=f"🎯 持有【{rarity.value}】碎片的玩家",
+            title=f"🎯 持有【{rarity.value}】{shiki_name} 的玩家",
             color=0x2ecc71
         )
 

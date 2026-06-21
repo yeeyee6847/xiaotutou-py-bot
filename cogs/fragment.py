@@ -365,10 +365,6 @@ class Fragment(commands.Cog):
                 left, qty = line.rsplit("x", 1)
                 qty = int(qty.strip())
 
-                if qty <= 0:
-                    errors.append(f"第 {i} 行數量必須 > 0：{line}")
-                    continue
-
                 parts = left.strip().split(" ", 1)
 
                 if len(parts) != 2:
@@ -465,7 +461,7 @@ class Fragment(commands.Cog):
                     VALUES ($1,$2,$3)
                     ON CONFLICT (game_account_id, shikigami_id)
                     DO UPDATE SET
-                        quantity = fragments_v2.quantity + EXCLUDED.quantity,
+                        quantity = EXCLUDED.quantity,
                         updated_at = NOW()
                 """,
                 account_row["id"],

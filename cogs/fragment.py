@@ -309,58 +309,45 @@ class Fragment(commands.Cog):
     # ================================== ADD END ================================== #
     
     # ================================== IMPORT START ================================== #
-    @fragment.command(name="import", description="上傳txt批量匯入碎片 (格式: 稀有度 式神 x數量)" )
-    @app_commands.describe(account="遊戲帳號（不選則使用主號）", file="上傳txt檔案")
+    @fragment.command(
+    name="import",
+    description="上傳txt批量匯入碎片（高速版）"
+    )
+    @app_commands.describe(
+        file="上傳txt檔案",
+        account="遊戲帳號"
+    )
     @app_commands.autocomplete(account=account_autocomplete)
     async def fragment_import(
         self,
         interaction: discord.Interaction,
         account: str,
-        file: discord.Attachment
+        file: discord.Attachment     
     ):
+
+        await interaction.response.defer(ephemeral=True)
+
         # =========================
-        # 1. 檔案檢查
+        # 1. read file
         # =========================
         if not file.filename.endswith(".txt"):
-            await interaction.response.send_message(
-                "❌ 只能上傳 .txt 檔案",
-                ephemeral=True
-            )
-            return
+            return await interaction.followup.send("❌ 只能上傳 .txt")
 
-        # =========================
-        # 2. 讀取檔案
-        # =========================
-        content = await file.read()
-
-        try:
-            text = content.decode("utf-8")
-        except Exception:
-            await interaction.response.send_message(
-                "❌ 檔案編碼必須為 UTF-8",
-                ephemeral=True
-            )
-            return
-
-        lines = text.split("\n")
+        text = (await file.read()).decode("utf-8", errors="ignore")
+        lines = [l.strip() for l in text.split("\n") if l.strip()]
 
         parsed = []
         errors = []
 
         # =========================
-        # 3. 解析 TXT（核心）
+        # 2. parse TXT
         # =========================
-        for i, line in enumerate(lines, start=1):
-
-            line = line.strip()
-
-            if not line:
-                continue
+        for i, line in enumerate(lines, 1):
 
             try:
-                if "x" not in line:
-                    errors.append(f"第 {i} 行格式錯誤（缺少 x）：{line}")
-                    continue
+                # SSR 云外镜 x5
+                if " x" not in line:
+                    raise ValueError()
 
                 left, qty = line.rsplit("x", 1)
                 qty = int(qty.strip())
@@ -368,113 +355,111 @@ class Fragment(commands.Cog):
                 parts = left.strip().split(" ", 1)
 
                 if len(parts) != 2:
-                    errors.append(f"第 {i} 行格式錯誤（應為：稀有度 式神 x數量）：{line}")
-                    continue
+                    raise ValueError()
 
                 rarity = parts[0].strip()
                 name = parts[1].strip()
 
-                parsed.append((rarity, name, qty))
+                parsed.append((i, rarity, name, qty))
 
-            except Exception:
-                errors.append(f"第 {i} 行解析失敗：{line}")
+            except:
+                errors.append(f"第{i}行格式錯誤：{line}")
 
-        # =========================
-        # 4. 錯誤直接返回
-        # =========================
         if errors:
-            await interaction.response.send_message(
-                "❌ 匯入失敗：\n\n" + "\n".join(errors[:10]),
-                ephemeral=True
+            return await interaction.followup.send(
+                "❌ 格式錯誤：\n" + "\n".join(errors[:10])
             )
-            return
 
         # =========================
-        # 5. DB
+        # 3. account
         # =========================
         async with self.bot.pool.acquire() as conn:
 
-            # =========================
-            # 找帳號
-            # =========================
             if account:
-
                 account_row = await conn.fetchrow("""
-                    SELECT id
-                    FROM game_accounts
+                    SELECT id FROM game_accounts
                     WHERE discord_user_id = $1
                     AND game_name = $2
-                """,
-                interaction.user.id,
-                account)
-
-                if not account_row:
-                    await interaction.response.send_message(
-                        "❌ 找不到該遊戲帳號",
-                        ephemeral=True
-                    )
-                    return
-
+                """, interaction.user.id, account)
             else:
-
                 account_row = await conn.fetchrow("""
-                    SELECT id
-                    FROM game_accounts
+                    SELECT id FROM game_accounts
                     WHERE discord_user_id = $1
                     ORDER BY is_main DESC
                     LIMIT 1
                 """, interaction.user.id)
 
-                if not account_row:
-                    await interaction.response.send_message(
-                        "❌ 尚未設定遊戲帳號",
-                        ephemeral=True
-                    )
-                    return
+            if not account_row:
+                return await interaction.followup.send("❌ 找不到帳號")
+
+            account_id = account_row["id"]
 
             # =========================
-            # 寫入碎片
+            # 4. LOAD ALL SHIKIGAMI (🔥关键优化)
             # =========================
-            for rarity, name, qty in parsed:
+            rows = await conn.fetch("""
+                SELECT id, rarity, name_tra, name_sim
+                FROM shikigami
+            """)
 
-                shiki = await conn.fetchrow("""
-                    SELECT id, name_tra, name_sim
-                    FROM shikigami
-                    WHERE rarity = $1
-                    AND (
-                            name_tra ILIKE '%' || $2 || '%'
-                        OR name_sim ILIKE '%' || $2 || '%'
-                    )
-                    LIMIT 1
-                """, rarity, name)
+            # build index (fast lookup)
+            lookup = {}
 
-                if not shiki:
-                    await interaction.response.send_message(
-                        f"❌ 找不到式神：[{rarity}] {name}",
-                        ephemeral=True
-                    )
-                    return
+            for r in rows:
+                lookup.setdefault(r["rarity"], [])
 
-                await conn.execute("""
+                lookup[r["rarity"]].append(r)
+
+            # =========================
+            # 5. match in memory (VERY FAST)
+            # =========================
+            insert_data = []
+            unmatched = []
+
+            for line_no, rarity, name, qty in parsed:
+
+                candidates = lookup.get(rarity, [])
+
+                found = None
+
+                for s in candidates:
+                    if name in s["name_tra"] or name in s["name_sim"]:
+                        found = s
+                        break
+
+                if not found:
+                    unmatched.append(f"第{line_no}行：{rarity} {name}")
+                    continue
+
+                insert_data.append((account_id, found["id"], qty))
+
+            # =========================
+            # 6. bulk insert (🔥 ultra fast)
+            # =========================
+            if insert_data:
+                await conn.executemany("""
                     INSERT INTO fragments_v2
                     (game_account_id, shikigami_id, quantity)
-                    VALUES ($1,$2,$3)
+                    VALUES ($1, $2, $3)
                     ON CONFLICT (game_account_id, shikigami_id)
                     DO UPDATE SET
                         quantity = EXCLUDED.quantity,
                         updated_at = NOW()
-                """,
-                account_row["id"],
-                shiki["id"],
-                qty)
+                """, insert_data)
 
-        # =========================
-        # 6. 成功回报
-        # =========================
-        await interaction.response.send_message(
-            f"✅ 成功匯入 {len(parsed)} 筆碎片資料",
-            ephemeral=True
-        )
+            # =========================
+            # 7. result
+            # =========================
+            msg = [
+                f"✅ 匯入完成",
+                f"📦 成功：{len(insert_data)}"
+            ]
+
+            if unmatched:
+                msg.append("\n❌ 未匹配式神：")
+                msg.extend(unmatched[:10])
+
+            await interaction.followup.send("\n".join(msg))
     # ================================== IMPORT END ================================== #
     
     # ================================== WANT START ================================== #

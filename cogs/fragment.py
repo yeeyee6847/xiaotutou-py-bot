@@ -248,13 +248,6 @@ class Fragment(commands.Cog):
         quantity: int
     ):
 
-        if quantity <= 0:
-            await interaction.response.send_message(
-                "❌ 数量必须大于 0",
-                ephemeral=True
-            )
-            return
-
         async with self.bot.pool.acquire() as conn:
 
             # =========================

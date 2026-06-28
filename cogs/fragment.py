@@ -293,7 +293,7 @@ class Fragment(commands.Cog):
                 VALUES ($1, $2, $3)
                 ON CONFLICT (game_account_id, shikigami_id)
                 DO UPDATE SET
-                    quantity = fragments_v2.quantity + EXCLUDED.quantity,
+                    quantity = EXCLUDED.quantity,
                     updated_at = NOW()
             """,
             acc_row["id"],
@@ -301,7 +301,7 @@ class Fragment(commands.Cog):
             quantity)
 
         await interaction.response.send_message(
-            f"✅ 已添加碎片 +{quantity}\n"
+            f"✅ 已更新碎片 +{quantity}\n"
             f"🎮 {account}\n"
             f"🎴 {shiki_row['name_tra']} / {shiki_row['name_sim']}",
             ephemeral=True
